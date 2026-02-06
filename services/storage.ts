@@ -1,35 +1,53 @@
 
 import { Trip } from '../types';
 
-const STORAGE_KEY = 'tripsplit_trips';
+const API_URL = '/api/trips';
 
 export const storageService = {
-  getTrips: (): Trip[] => {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+  getTrips: async (): Promise<Trip[]> => {
+    try {
+      const response = await fetch(API_URL);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`API Error (${response.status}):`, errorText);
+        throw new Error(`Fehler beim Laden der Reisen: Status ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Storage Service Error:", error);
+      return [];
+    }
   },
 
-  saveTrips: (trips: Trip[]): void => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
+  saveTrips: async (trips: Trip[]): Promise<void> => {
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trips),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`API Save Error (${response.status}):`, errorText);
+        throw new Error(`Fehler beim Speichern: Status ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Storage Service Save Error:", error);
+    }
   },
 
-  getTrip: (id: string): Trip | undefined => {
-    const trips = storageService.getTrips();
-    return trips.find(t => t.id === id);
+  addTrip: async (trip: Trip): Promise<void> => {
+    const trips = await storageService.getTrips();
+    await storageService.saveTrips([...trips, trip]);
   },
 
-  addTrip: (trip: Trip): void => {
-    const trips = storageService.getTrips();
-    storageService.saveTrips([...trips, trip]);
+  updateTrip: async (updatedTrip: Trip): Promise<void> => {
+    const trips = await storageService.getTrips();
+    await storageService.saveTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   },
 
-  updateTrip: (updatedTrip: Trip): void => {
-    const trips = storageService.getTrips();
-    storageService.saveTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
-  },
-
-  deleteTrip: (id: string): void => {
-    const trips = storageService.getTrips();
-    storageService.saveTrips(trips.filter(t => t.id !== id));
+  deleteTrip: async (id: string): Promise<void> => {
+    const trips = await storageService.getTrips();
+    await storageService.saveTrips(trips.filter(t => t.id !== id));
   }
 };
