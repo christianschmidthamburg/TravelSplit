@@ -8,23 +8,23 @@ export const storageService = {
   getTrips: async (): Promise<Trip[]> => {
     try {
       const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('API Error');
-      
       const data = await response.json();
-      const trips = Array.isArray(data) ? data : [];
       
-      // Lokal spiegeln für Offline/Fallback
+      if (!response.ok) {
+        console.warn("API ist noch nicht konfiguriert (Marketplace-Setup fehlt). Nutze lokalen Modus.");
+        throw new Error(data.error || 'Server Error');
+      }
+      
+      const trips = Array.isArray(data) ? data : [];
       localStorage.setItem(FALLBACK_KEY, JSON.stringify(trips));
       return trips;
     } catch (error) {
-      console.warn("Nutze LocalStorage Fallback:", error);
       const local = localStorage.getItem(FALLBACK_KEY);
       return local ? JSON.parse(local) : [];
     }
   },
 
   saveTrips: async (trips: Trip[]): Promise<void> => {
-    // Immer zuerst lokal sichern
     localStorage.setItem(FALLBACK_KEY, JSON.stringify(trips));
     
     try {
@@ -33,9 +33,13 @@ export const storageService = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(trips),
       });
-      if (!response.ok) throw new Error('Cloud Save Failed');
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Cloud Save Failed');
+      }
     } catch (error) {
-      console.error("Daten konnten nicht in der Cloud gespeichert werden (nur lokal):", error);
+      console.info("Info: Cloud-Speicherung noch nicht aktiv (Upstash Setup fehlt). Daten sind nur in diesem Browser sicher.");
     }
   },
 
