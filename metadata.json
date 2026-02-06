@@ -1,0 +1,6 @@
+
+{
+  "name": "TripSplit - Group Expense Tracker",
+  "description": "Ein Tool zur Verwaltung von Gruppenausgaben mit automatischer Abrechnung und Gast-Zugängen.",
+  "requestFramePermissions": []
+}
